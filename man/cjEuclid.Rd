@@ -9,11 +9,11 @@ cjEuclid(
   data,
   X = labels(terms(formula))[[1]],
   Y = labels(terms(formula))[[2]],
-  R = NULL,
-  C = NULL,
+  Row = NULL,
+  Col = NULL,
   mins = NULL,
   maxs = NULL,
-  lengths = c(20, 20),
+  lengths = NULL,
   ideal_color = "blue",
   x_vals = c("L", "M", "H"),
   y_vals = c("A", "B", "C"),
@@ -31,9 +31,15 @@ cjEuclid(
 
 \item{Y}{string: variable on Y axis for plot}
 
-\item{R}{variable name for faceting by row}
+\item{Row}{variable name for faceting by row}
 
-\item{C}{variable name for faceting by column}
+\item{Col}{variable name for faceting by column}
+
+\item{mins}{minimal values for fitting variables}
+
+\item{maxs}{minimal values for fitting variables}
+
+\item{lengths}{lengths of fitting variables}
 
 \item{ideal_color}{color for ideal points}
 

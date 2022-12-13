@@ -88,7 +88,7 @@ results$graph
 
 ```
 
-# Arguments
+# Examples
 
 The functions include multiple arguments to allow graphing multiple dimensions.  Here we illustrate plotting 2 dimensions with faceting by a third.
 

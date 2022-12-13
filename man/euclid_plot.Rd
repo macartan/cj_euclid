@@ -9,8 +9,8 @@ euclid_plot(
   X,
   Y,
   outcome = "utility",
-  R = NULL,
-  C = NULL,
+  Row = NULL,
+  Col = NULL,
   x_breaks = NULL,
   y_breaks = NULL,
   y_vals = c("L", "M", "H"),
@@ -23,9 +23,9 @@ euclid_plot(
 
 \item{Y}{string: variable on Y axis for plot}
 
-\item{R}{variable name for faceting by row}
+\item{Row}{variable name for faceting by row}
 
-\item{C}{variable name for faceting by column}
+\item{Col}{variable name for faceting by column}
 
 \item{y_vals}{labels for y axis}
 

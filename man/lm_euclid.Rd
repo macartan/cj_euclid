@@ -30,9 +30,9 @@ library(tidyverse)
 library(DeclareDesign)
 data <-
 fabricatr::fabricate(
-  ID = add_level(20),
+  ID = add_level(50),
   choice = add_level(2,
                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
-                     Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N) + 3*A*B))
+                     Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .1*rnorm(N)))
 lm_euclid(Y ~ A + B, data, fixed_effects = ~ ID)
 }

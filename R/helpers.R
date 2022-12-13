@@ -55,7 +55,7 @@ lm_euclid <-
     # print matrix
     # Check positive semi definite
     message(paste("The estimated A matrix is", ifelse(all(eigen(A, only.values = TRUE)$values >=  0), "", "not"), "positive semi definite"))
-    message("A matrix:")
+    message("The A matrix:")
     print(as.matrix(A))
     M
   }
@@ -274,4 +274,5 @@ cjEuclid <-
     list(model = model, predictions_df = predictions_df, graph = graph)
 
     }
+
 

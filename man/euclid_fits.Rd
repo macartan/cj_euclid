@@ -4,14 +4,7 @@
 \alias{euclid_fits}
 \title{Get fitted values}
 \usage{
-euclid_fits(
-  formula,
-  model,
-  data,
-  mins = NULL,
-  maxs = NULL,
-  lengths = c(2, 10, 10)
-)
+euclid_fits(formula, model, data, mins = NULL, maxs = NULL, lengths = NULL)
 }
 \arguments{
 \item{formula}{A formula indicating lhs and rhs vars, e.g. Y ~ A + B + C}
