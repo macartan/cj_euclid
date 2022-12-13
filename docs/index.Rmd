@@ -3,6 +3,7 @@ title: "Estimating and plotting generlized Euclidean preference parameters from 
 output: 
   html_document:
     toc: true
+    number_sections: true
 date: '2022-12-13'
 ---
 
@@ -92,7 +93,7 @@ results$graph
 
 The functions include multiple arguments to allow graphing multiple dimensions.  Here we illustrate plotting 2 dimensions with faceting by a third.
 
-```{r}
+```{r, fig.height = 4, fig.width = 14}
 
 # Data has three dimensions and two observations per subject
 

@@ -171,6 +171,15 @@ euclid_plot <-
 
 
   g + facet_grid(X3 ~ X4)
+
+  if(is.null(Row) & is.null(Col))
+    g <- g +
+    geom_point(data = predictions_df  |>
+                 dplyr::filter(utility == max(utility)),
+               mapping = aes(!!sym(X), !!sym(Y)),
+               color = ideal_color)
+
+
   if(!is.null(Row) & !is.null(Col))
     g <- g +
     facet_grid(as.formula(paste(Row, " ~ ", Col))) +
