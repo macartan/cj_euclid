@@ -17,10 +17,10 @@
 #' library(DeclareDesign)
 #' data <-
 #' fabricatr::fabricate(
-#'   ID = add_level(20),
+#'   ID = add_level(50),
 #'   choice = add_level(2,
 #'                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
-#'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N) + 3*A*B))
+#'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .1*rnorm(N)))
 #' lm_euclid(Y ~ A + B, data, fixed_effects = ~ ID)
 
 
@@ -39,9 +39,28 @@ lm_euclid <-
 
     f2 <- as.formula(paste(formula.tools::lhs(formula), " ~ ", rhs))
 
-    estimatr::lm_robust(f2, data = data, ...)
+    M <- estimatr::lm_robust(f2, data = data, ...)
 
+    # matrix representation
+    m <- sapply(Xs, function(x)
+      sapply(Xs, function(y)
+        ifelse(x==y,
+               M$coefficients[paste0("I(", x, "^2)")],
+               M$coefficients[paste0(x, ":", y)])))
+
+    m[is.na(m)] <- 0
+
+    A <- -(m + t(m) - diag(diag(m)))
+
+    # print matrix
+    # Check positive semi definite
+    message(paste("The estimated A matrix is", ifelse(all(eigen(A, only.values = TRUE)$values >=  0), "", "not"), "positive semi definite"))
+    message("A matrix:")
+    print(as.matrix(A))
+    M
   }
+
+
 
 
 
@@ -150,17 +169,20 @@ euclid_plot <-
     scale_x_continuous(breaks=x_breaks, labels = x_vals)  +
     scale_y_continuous(breaks=y_breaks, labels = y_vals)
 
+
+  g + facet_grid(X3 ~ X4)
   if(!is.null(Row) & !is.null(Col))
-    g <- g + facet_grid(rows = Row, cols = Col) +
+    g <- g +
+    facet_grid(as.formula(paste(Row, " ~ ", Col))) +
     geom_point(data = predictions_df  |>
-                 group_by(c(!!sym(Row), !!sym(Col))) |>
+                 group_by(!!sym(Row), !!sym(Col)) |>
                  dplyr::filter(utility == max(utility)),
                mapping = aes(!!sym(X), !!sym(Y)),
                color = ideal_color)
 
 
   if(!is.null(Row) &  is.null(Col))
-    g <- g + facet_grid(rows = Row)  +
+    g <- g + facet_grid(as.formula(paste(Row, " ~ .")))  +
     geom_point(data = predictions_df  |>
                  group_by(!!sym(Row)) |>
                  dplyr::filter(utility == max(utility)),
@@ -169,7 +191,7 @@ euclid_plot <-
 
 
   if(is.null(Row) &  !is.null(Col))
-    g <- g + facet_grid(cols = Col)  +
+    g <- g + facet_grid(as.formula(paste(". ~ ", Col))) +
     geom_point(data = predictions_df  |>
                  group_by(!!sym(Col)) |>
                  dplyr::filter(utility == max(utility)),
@@ -233,9 +255,10 @@ cjEuclid <-
 
     model <- lm_euclid(formula, data)
 
-    fitted <- euclid_fits(formula, model, data,  mins = mins, maxs = maxs, lengths = lengths)
+    predictions_df <- euclid_fits(formula, model, data,  mins = mins, maxs = maxs, lengths = lengths)
 
-    graph <- fitted |>
+    graph <-
+      predictions_df |>
       euclid_plot(
         ideal_color = ideal_color,
         X = X,
@@ -248,7 +271,7 @@ cjEuclid <-
         y_breaks = y_breaks)
 
 
-    list(model = model, fitted = fitted, graph = graph)
+    list(model = model, predictions_df = predictions_df, graph = graph)
 
     }
 

@@ -1,6 +1,8 @@
 ---
-title: "illustration"
-output: html_document
+title: "Estimating and plotting generlized Euclidean preference parameters from conjoint data"
+output: 
+  html_document:
+    toc: true
 date: '2022-12-13'
 ---
 
@@ -78,7 +80,6 @@ euclid_plot(predictions_df, X = "guns", Y = "butter")
  
  
 
-
 ```{r}
 
 results <- cjEuclid(rating ~ guns + butter, data)
@@ -110,7 +111,7 @@ results <-
            data = data,
            X = "B",
            Y = "C",
-           Row = "A",
+           Col = "A",
            mins = c(-2, -2, -2),
            maxs = c(2, 2, 2),
            lengths = c(5, 25, 35),
@@ -124,15 +125,14 @@ more `ggplot`ting can be done later:
 
 ```{r, fig.height = 3, fig.width = 12}
 results$graph + 
-  ylab("another label and a flip") + coord_flip() + 
-  facet_grid(~ A, labeller = label_both)
+  ylab("another label and a flip") + coord_flip() 
 
 ```
 
 
 ## 4 d
 
-```{r, eval = FALSE}
+```{r, eval = TRUE}
 
 # Data has three dimensions and two observations per subject
 
@@ -141,7 +141,7 @@ data <-
    ID = add_level(20),
    choice = add_level(2,
                       X1 = rnorm(N), X2 = rnorm(N), X3 = rnorm(N), X4 = rnorm(N), 
-                      W = -(X1^2 + (X2-.3)^2 + (X3 --.67)^2 + X4^2)  + .2*rnorm(N) + 3*X1*X2))
+                      W = -(X1^2 + (X2-.3)^2 + (X3 --.67)^2 + X4^2)  + .2*rnorm(N)))
 
 
 results <- 
@@ -151,11 +151,11 @@ results <-
            data = data,
            X = "X1",
            Y = "X2",
-           R = "X3",
-           C = "X4",
+           Row = "X3",
+           Col = "X4",
            mins = c(-2, -1, -2, -2),
            maxs = c(2, 1, 2, 2),
-           lengths = c(5, 3, 35, 25),
+           lengths = c(35, 25, 5, 3),
            y_vals = c("little", "some", "much"),
            x_vals = c("This", "that", "there"))
 
@@ -167,3 +167,17 @@ results$graph
 
 Can be done by treating a subgroup as a variable, by stitching multiple plots together, or by running lm_euclid adn cj_Euclid on multiple groups and then applying the plot function with the group as a dimension.
 
+
+## Example when $A$ is not positive semi definite
+
+```{r}
+data <-
+ fabricatr::fabricate(N = 40,
+                      butter = rnorm(N), 
+                      guns = rnorm(N),
+                      rating  = -(butter^2 - (guns-.3)^2 + .2*rnorm(N)))
+
+cjEuclid(rating ~ guns + butter, data)$graph
+
+
+```
