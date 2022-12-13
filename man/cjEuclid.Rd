@@ -5,38 +5,43 @@
 \title{Fit generalized Euclidean preferences model}
 \usage{
 cjEuclid(
+  formula,
   data,
-  Y = "Y",
-  A = "A",
-  B = "B",
-  C = "C",
-  ID = "ID",
-  a_min = -1,
-  a_max = 1,
-  a_step = 1,
-  b_min = -1,
-  b_max = 1,
-  b_step = 0.1,
-  c_min = -1,
-  c_max = 1,
-  c_step = 0.1,
+  X = labels(terms(formula))[[1]],
+  Y = labels(terms(formula))[[2]],
+  R = NULL,
+  C = NULL,
+  mins = NULL,
+  maxs = NULL,
+  lengths = c(20, 20),
   ideal_color = "blue",
   x_vals = c("L", "M", "H"),
   y_vals = c("A", "B", "C"),
-  x_breaks = c(-0.9, 0, 0.9),
-  y_breaks = c(-0.9, 0, 0.9)
+  x_breaks = NULL,
+  y_breaks = NULL,
+  ...
 )
 }
 \arguments{
+\item{formula}{A formula}
+
 \item{data}{A \code{data.frame}.}
 
-\item{A, }{B, C, Y names of policy and outcome variables}
+\item{X}{string: variable on X axis for plot}
 
-\item{ideal_color}{Color for idea points}
+\item{Y}{string: variable on Y axis for plot}
+
+\item{R}{variable name for faceting by row}
+
+\item{C}{variable name for faceting by column}
+
+\item{ideal_color}{color for ideal points}
 
 \item{x_vals}{labels for x axis}
 
 \item{y_vals}{labels for y axis}
+
+\item{...}{other arguments passed to estimatr}
 }
 \value{
 A  \code{list}
@@ -52,7 +57,7 @@ fabricatr::fabricate(
   ID = add_level(20),
   choice = add_level(2,
                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
-                     Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N)) + A*B)
-out <- cjEuclid(data)
+                     Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N)))
+out <- cjEuclid(Y ~ A + B + C, data, lengths = c(20, 20, 3))
+out$graph
 }
-\keyword{internal}

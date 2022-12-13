@@ -1,0 +1,169 @@
+---
+title: "illustration"
+output: html_document
+date: '2022-12-13'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(DeclareDesign)
+library(tidyverse)
+
+```
+
+
+```{r, message = FALSE}
+library(cjEuclid)
+```
+
+
+# Functions
+
+The package has three functions and a wrapper.
+
+## `lm_euclid` 
+
+`lm_euclid`  fits a model with interactions and quadratic terms given a formula
+
+For instance:
+
+```{r}
+data <-
+ fabricatr::fabricate(N = 40,
+                      butter = rnorm(N), 
+                      guns = rnorm(N),
+                      rating  = -(butter^2 + (guns-.3)^2 + .2*rnorm(N)))
+
+model <-  lm_euclid(rating ~ guns + butter, data)
+
+model |> tidy() |> kable(digits = 2)
+
+```
+The function simply creates the Euclidian formula and passes it to `lm_robust`. 
+
+You can provide any additional `lm_robust` functions you want as additional arguments, for instance, weights, cluster, blocks.
+
+
+## `euclid_fits`
+
+`euclid_fits` is a simple helper to generate fitted values for a model given specified ranges and length
+
+```{r}
+
+predictions_df <- 
+  euclid_fits(formula = rating ~ guns + butter, model, data, lengths = c(2,3))
+
+predictions_df |> kable(digits = 3)
+```
+
+
+## `euclid_plot`
+
+`euclid_plot` call ggplot to plot the predicted fits and adds ideal points
+
+```{r}
+
+predictions_df <- 
+  euclid_fits(formula = rating ~ guns + butter, model, data, lengths = c(20,20))
+
+euclid_plot(predictions_df, X = "guns", Y = "butter")
+
+```
+
+## `cjEuclid`
+
+
+ `cjEuclid` wraps these functions and returns a list with the model, the fitted values, and the graph.
+ 
+ 
+
+
+```{r}
+
+results <- cjEuclid(rating ~ guns + butter, data)
+results$graph
+
+
+```
+
+# Arguments
+
+The functions include multiple arguments to allow graphing multiple dimensions.  Here we illustrate plotting 2 dimensions with faceting by a third.
+
+```{r}
+
+# Data has three dimensions and two observations per subject
+
+data <-
+ fabricatr::fabricate(
+   ID = add_level(20),
+   choice = add_level(2,
+                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
+                      W = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N) + 3*A*B))
+
+
+results <- 
+  cjEuclid(W ~ A + B + C,
+           fixed_effects = ~ ID,
+           se_type = "stata", 
+           data = data,
+           X = "B",
+           Y = "C",
+           Row = "A",
+           mins = c(-2, -2, -2),
+           maxs = c(2, 2, 2),
+           lengths = c(5, 25, 35),
+           y_vals = c("little", "some", "much"),
+           x_vals = c("This", "that", "there"))
+
+results$graph
+```
+
+more `ggplot`ting can be done later:
+
+```{r, fig.height = 3, fig.width = 12}
+results$graph + 
+  ylab("another label and a flip") + coord_flip() + 
+  facet_grid(~ A, labeller = label_both)
+
+```
+
+
+## 4 d
+
+```{r, eval = FALSE}
+
+# Data has three dimensions and two observations per subject
+
+data <-
+ fabricatr::fabricate(
+   ID = add_level(20),
+   choice = add_level(2,
+                      X1 = rnorm(N), X2 = rnorm(N), X3 = rnorm(N), X4 = rnorm(N), 
+                      W = -(X1^2 + (X2-.3)^2 + (X3 --.67)^2 + X4^2)  + .2*rnorm(N) + 3*X1*X2))
+
+
+results <- 
+  cjEuclid(W ~ X1 + X2 + X3 + X4,
+           fixed_effects = ~ ID,
+           se_type = "stata", 
+           data = data,
+           X = "X1",
+           Y = "X2",
+           R = "X3",
+           C = "X4",
+           mins = c(-2, -1, -2, -2),
+           maxs = c(2, 1, 2, 2),
+           lengths = c(5, 3, 35, 25),
+           y_vals = c("little", "some", "much"),
+           x_vals = c("This", "that", "there"))
+
+results$graph
+```
+
+
+## Subgroup plots
+
+Can be done by treating a subgroup as a variable, by stitching multiple plots together, or by running lm_euclid adn cj_Euclid on multiple groups and then applying the plot function with the group as a dimension.
+
