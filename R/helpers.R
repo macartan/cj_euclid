@@ -50,7 +50,7 @@ lm_euclid <-
 
     m[is.na(m)] <- 0
 
-    A <- -(m + t(m) - diag(diag(m)))
+    A <- -(m + t(m))/2 # not diag is added to itself before division; off diagonals also need to be divided by 2
 
     # print matrix
     # Check positive semi definite

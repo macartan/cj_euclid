@@ -1,85 +1,235 @@
 
-implement <-
+#' Fit Euclidean model
+#'
+#' @param formula A formula indicating lhs and rhs vars, e.g. Y ~ A + B + C
+#' @param data A \code{data.frame}.
+#' @param x_vals labels for x axis
+#' @param y_vals labels for y axis
+#' @param ideal_color Color for idea points
+#' @param ... other arguments passed to estimatr
+#' @return A  \code{list}
+#' @import fabricatr
+#' @import tidyverse
+#' @import formula.tools
+#' @export
+#' @examples
+#' library(tidyverse)
+#' library(DeclareDesign)
+#' data <-
+#' fabricatr::fabricate(
+#'   ID = add_level(50),
+#'   choice = add_level(2,
+#'                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
+#'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .1*rnorm(N)))
+#' lm_euclid(Y ~ A + B, data, fixed_effects = ~ ID)
 
-  function(data, Y, A, B, C, ID, se_type = "stata", ...) {
 
-    data <- data|>
-      dplyr::mutate(id = !!as.name(ID),
-             y = !!as.name(Y),
-             a = !!as.name(A),
-             b = !!as.name(B),
-             c = !!as.name(C),
-             a_2 = a^2, b_2 = b^2, c_2 = c^2)
+lm_euclid <-
 
-    estimatr::lm_robust(
-      y ~ a + a_2 + b + b_2 + c + c_2 + a:b + a:c + b:c,
-      data = data,
-      fixed_effects = ~ id,
-      se_type = "stata", ...)
+  function(formula, data, ...) {
+
+    Xs <- labels(terms(formula))
+
+    rhs <-
+      c(Xs,
+        paste0("I(", Xs, "^2)"),
+        utils::combn(Xs, 2, simplify = FALSE) |> lapply(function(x) paste(x, collapse = ":")) |>
+          unlist()) |>
+      paste(collapse = " + ")
+
+    f2 <- as.formula(paste(formula.tools::lhs(formula), " ~ ", rhs))
+
+    M <- estimatr::lm_robust(f2, data = data, ...)
+
+    # matrix representation
+    m <- sapply(Xs, function(x)
+      sapply(Xs, function(y)
+        ifelse(x==y,
+               M$coefficients[paste0("I(", x, "^2)")],
+               M$coefficients[paste0(x, ":", y)])))
+
+    m[is.na(m)] <- 0
+
+    A <- -(m + t(m))/2 # not diag is added to itself before division; off diagonals also need to be divided by 2
+
+    # print matrix
+    # Check positive semi definite
+    message(paste("The estimated A matrix is", ifelse(all(eigen(A, only.values = TRUE)$values >=  0), "", "not"), "positive semi definite"))
+    message("The A matrix:")
+    print(as.matrix(A))
+    M
   }
 
 
-fitted_values <- function(
-    model,
-    a_min = -1, a_max = 1, a_step = 1,
-    b_min = -1, b_max = 1, b_step = .1,
-    c_min = -1, c_max = 1, c_step = .1) {
 
-  df <- expand_grid(
-    a = seq(a_min, a_max, a_step),
-    b = seq(b_min, b_max, b_step),
-    c = seq(c_min, c_max, c_step),
-    id = model$felevels$id[1:2])|>
-  mutate(a_2 = a^2, b_2 = b^2, c_2 = c^2)
+
+
+#' Get fitted values
+#'
+#' @param formula A formula indicating lhs and rhs vars, e.g. Y ~ A + B + C
+#' @param data A \code{data.frame}.
+#' @param x_vals labels for x axis
+#' @param y_vals labels for y axis
+#' @param ideal_color Color for idea points
+#' @param ... other arguments passed to estimatr
+#' @return A  \code{list}
+#' @import fabricatr
+#' @import tidyverse
+#' @import formula.tools
+#' @export
+#' @examples
+#' model <- lm_euclid(Y ~ A + B + C, data)
+#' predictions_df <- euclid_fits(formula = Y ~ A + B + C, model, data, lengths = c(3,3, 3))
+
+euclid_fits <- function(
+    formula,
+    model,
+    data,
+    mins = NULL,
+    maxs = NULL,
+    lengths = NULL){
+
+  Xs <- labels(terms(formula))
+
+  if(is.null(lengths)) lengths <- rep(25, length(Xs))
+  if(length(lengths) != length(Xs)) stop("Check length of steps")
+  if(is.null(mins)) mins <- data[Xs] |> apply(2, min, na.rm = TRUE)
+  if(is.null(maxs)) maxs <- data[Xs] |> apply(2, max, na.rm = TRUE)
+
+  ranges <- lapply(1:length(Xs), function(j) seq(mins[j], maxs[j], length = lengths[j]))
+  names(ranges) <- Xs
+
+  df <- expand_grid(do.call(expand_grid,ranges))
 
   df |> mutate(utility = predict(model, newdata = df))
-}
+
+  }
 
 
-plot_cjEuclid <-
+#' Plot fitted values with ideal points marked
+#'
+#' @param perdictions_df  Predictions
+#' @param X string: variable on X axis for plot
+#' @param Y string: variable on Y axis for plot
+#' @param Col variable name for faceting by column
+#' @param Row variable name for faceting by row
+#' @param x_vals labels for x axis
+#' @param y_vals labels for y axis
+#' @param ideal_color color for ideal points
+#' @param ... other arguments passed to estimatr
+#' @return A  \code{list}
+#' @import fabricatr
+#' @import tidyverse
+#' @import formula.tools
+#' @export
+#' @examples
+#' model <- lm_euclid(Y ~ A + B + C, data)
+#' predictions_df <- euclid_fits(formula = Y ~ A + B + C, model, data, lengths = c(3,3, 3))
+#' predictions_df <- euclid_fits(data, model, formula = Y ~ A + B, lengths = c(3,3))
+#'  euclid_plot(predictions_df, X = "A", Y = "B")
+#'  euclid_plot(predictions_df, X = "A", Y = "B", R = "C")
+
+euclid_plot <-
   function(predictions_df,
-           ideal_color = "blue",
-           x_vals = c("Least", "Moderately","Most"),
-           y_vals  = c("Most\nExemptions", "Some\nExemptions", "Fewest\nExemptions"),
-           x_breaks = c(-.9,0,.9),
-           y_breaks = c(-.9,0,.9))
-  predictions_df |>
-  group_by(a) |>
-  mutate(Utility = utility) |>
-  mutate(Utility = (utility - min(utility))/(max(utility) - min(utility))) |>
-  ungroup() |>
-  ggplot() +
-  geom_tile(aes(x=b, y=c, fill=Utility)) +
-  geom_contour(aes(x=b,y=c,z=utility), color="black") +
-  facet_grid(~a) +
-  scale_fill_gradientn("Utility", colours = rev(terrain.colors(10))) +
-  coord_fixed() +
-  theme(plot.title = element_text(size = 20))+
-  theme(axis.text=element_text(size = 20)) +
-  theme(axis.text.x = element_text(size = 20)) +
-  theme(strip.text.x = element_text(size = 20))+
-  theme(legend.text=element_text(size=20))+
-  theme_bw() +
-  geom_point(data = predictions_df  |> group_by(a) |>
-               dplyr::filter(utility == max(utility)),
-             mapping = aes(b, c),
-             color = ideal_color) +
-  scale_x_continuous(breaks=x_breaks, labels = x_vals)  +
-  scale_y_continuous(breaks=y_breaks, labels = y_vals)
+           X, Y,
+           outcome = "utility",
+           Row = NULL, Col = NULL,
+           x_breaks = NULL,
+           y_breaks = NULL,
+           y_vals = c("L", "M","H"),
+           x_vals  = c("l", "c", "r"),
+           ideal_color = "blue"){
+
+  if(is.null(x_breaks))
+  x_breaks <- c(min(predictions_df[X][[1]]), median(predictions_df[X][[1]]), max(predictions_df[X][[1]]))
+
+  if(is.null(y_breaks))
+  y_breaks <- c(min(predictions_df[Y][[1]]), median(predictions_df[Y][[1]]), max(predictions_df[Y][[1]]))
 
 
+  g <-
+
+    predictions_df |>
+
+    ggplot() +
+
+    geom_tile(aes(x= !!sym(X), y=!!sym(Y), fill=!!sym(outcome))) +
+
+    geom_contour(aes(x=!!sym(X),y=!!sym(Y),z=!!sym(outcome)), color="black") +
+
+    scale_fill_gradientn(outcome, colours = rev(terrain.colors(10))) +
+
+    coord_fixed() +
+    theme(plot.title = element_text(size = 20))+
+    theme(axis.text=element_text(size = 20)) +
+    theme(axis.text.x = element_text(size = 20)) +
+    theme(strip.text.x = element_text(size = 20))+
+    theme(legend.text=element_text(size=20))+
+    theme_bw()  +
+    scale_x_continuous(breaks=x_breaks, labels = x_vals)  +
+    scale_y_continuous(breaks=y_breaks, labels = y_vals)
+
+
+  g + facet_grid(X3 ~ X4)
+
+  if(is.null(Row) & is.null(Col))
+    g <- g +
+    geom_point(data = predictions_df  |>
+                 dplyr::filter(utility == max(utility)),
+               mapping = aes(!!sym(X), !!sym(Y)),
+               color = ideal_color)
+
+
+  if(!is.null(Row) & !is.null(Col))
+    g <- g +
+    facet_grid(as.formula(paste(Row, " ~ ", Col))) +
+    geom_point(data = predictions_df  |>
+                 group_by(!!sym(Row), !!sym(Col)) |>
+                 dplyr::filter(utility == max(utility)),
+               mapping = aes(!!sym(X), !!sym(Y)),
+               color = ideal_color)
+
+
+  if(!is.null(Row) &  is.null(Col))
+    g <- g + facet_grid(as.formula(paste(Row, " ~ .")))  +
+    geom_point(data = predictions_df  |>
+                 group_by(!!sym(Row)) |>
+                 dplyr::filter(utility == max(utility)),
+               mapping = aes(!!sym(X), !!sym(Y)),
+               color = ideal_color)
+
+
+  if(is.null(Row) &  !is.null(Col))
+    g <- g + facet_grid(as.formula(paste(". ~ ", Col))) +
+    geom_point(data = predictions_df  |>
+                 group_by(!!sym(Col)) |>
+                 dplyr::filter(utility == max(utility)),
+               mapping = aes(!!sym(X), !!sym(Y)),
+               color = ideal_color)
+
+
+  g
+
+  }
 
 #' Fit generalized Euclidean preferences model
 #'
 #' @param data A \code{data.frame}.
-#' @param A, B, C, Y names of policy and outcome variables
+#' @param formula A formula
+#' @param mins minimal values for fitting variables
+#' @param maxs minimal values for fitting variables
+#' @param lengths lengths of fitting variables
+#' @param X string: variable on X axis for plot
+#' @param Y string: variable on Y axis for plot
+#' @param Col variable name for faceting by column
+#' @param Row variable name for faceting by row
 #' @param x_vals labels for x axis
 #' @param y_vals labels for y axis
-#' @param ideal_color Color for idea points
+#' @param ideal_color color for ideal points
+#' @param ... other arguments passed to estimatr
 #' @return A  \code{list}
 #' @import fabricatr
 #' @import tidyverse
-#' @keywords internal
 #' @export
 #' @examples
 #' library(tidyverse)
@@ -89,43 +239,49 @@ plot_cjEuclid <-
 #'   ID = add_level(20),
 #'   choice = add_level(2,
 #'                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
-#'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N) + 3*A*B))
-#' out <- cjEuclid(data)
+#'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N)))
+#' out <- cjEuclid(Y ~ A + B + C, data, lengths = c(20, 20, 3))
 #' out$graph
 
 
 cjEuclid <-
 
-  function(data,
-           Y = "Y", A = "A", B = "B", C = "C", ID = "ID",
-           a_min = -1, a_max = 1, a_step = 1,
-           b_min = -1, b_max = 1, b_step = .1,
-           c_min = -1, c_max = 1, c_step = .1,
+  function(formula,
+           data,
+           X = labels(terms(formula))[[1]],
+           Y = labels(terms(formula))[[2]],
+           Row = NULL,
+           Col = NULL,
+           mins = NULL, maxs = NULL, lengths = NULL,
            ideal_color = "blue",
            x_vals = c("L", "M","H"),
            y_vals  = c("A", "B", "C"),
-           x_breaks = c(-.9,0,.9),
-           y_breaks = c(-.9,0,.9)
+           x_breaks = NULL,
+           y_breaks = NULL,
+           ...
 
            ) {
 
-    model <- implement(data, Y, A, B, C, ID)
+    model <- lm_euclid(formula, data)
 
-    fitted <- fitted_values(model,
-                            a_min = a_min, a_max = a_max, a_step = a_step,
-                            b_min = b_min, b_max = b_max, b_step = b_step,
-                            c_min = c_min, c_max = c_max, c_step = c_step)
+    predictions_df <- euclid_fits(formula, model, data,  mins = mins, maxs = maxs, lengths = lengths)
 
-    graph <- fitted |>
-      plot_cjEuclid(
+    graph <-
+      predictions_df |>
+      euclid_plot(
         ideal_color = ideal_color,
+        X = X,
+        Y = Y,
+        R = Row,
+        C = Col,
         x_vals = x_vals,
         y_vals  = y_vals,
         x_breaks = x_breaks,
         y_breaks = y_breaks)
 
 
-    list(model = model, fitted = fitted, graph = graph)
+    list(model = model, predictions_df = predictions_df, graph = graph)
 
     }
+
 

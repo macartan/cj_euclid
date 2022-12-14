@@ -27,16 +27,28 @@ The package has three functions and a wrapper.
 
 ## `lm_euclid` 
 
-`lm_euclid`  fits a model with interactions and quadratic terms given a formula
+`lm_euclid`  fits a model with interactions and quadratic terms given a formula. It seeks to return the parameters of a generalized Euclidean model of the form:
+
+
 
 For instance:
 
 ```{r}
+
+r <- matrix(c(1, .15, .15, 2), 2, 2)
+p <- c(.1, .5)
+
+u <- function(butter = 0, guns = 0)
+  -(c(butter, guns) - p) %*% r %*% (c(butter, guns) -p)
+
+
 data <-
- fabricatr::fabricate(N = 40,
+ fabricatr::fabricate(N = 100,
                       butter = rnorm(N), 
-                      guns = rnorm(N),
-                      rating  = -(butter^2 + (guns-.3)^2 + .2*rnorm(N)))
+                      guns = rnorm(N))
+data$rating <- sapply(1:nrow(data), function(i) u(data$butter[i], data$guns[i]))
+
+
 
 model <-  lm_euclid(rating ~ guns + butter, data)
 
