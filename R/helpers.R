@@ -54,9 +54,8 @@ lm_euclid <-
 
     # print matrix
     # Check positive semi definite
-    message(paste("The estimated A matrix is", ifelse(all(eigen(A, only.values = TRUE)$values >=  0), "", "not"), "positive semi definite"))
-    message("The A matrix:")
-    print(as.matrix(A))
+    if(!all(eigen(A, only.values = TRUE)$values >=  0)) warning("The estimated A matrix is not positive semi definite")
+    attr(M, "A") <- as.matrix(A)
     M
   }
 
