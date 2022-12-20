@@ -21,7 +21,8 @@
 #'   choice = add_level(2,
 #'                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
 #'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .1*rnorm(N)))
-#' lm_euclid(Y ~ A + B, data, fixed_effects = ~ ID)
+#' model <- lm_euclid(Y ~ A + B, data, fixed_effects = ~ ID)
+#' model
 
 
 lm_euclid <-
@@ -50,17 +51,67 @@ lm_euclid <-
 
     m[is.na(m)] <- 0
 
-    A <- -(m + t(m))/2 # not diag is added to itself before division; off diagonals also need to be divided by 2
+    A <- as.matrix(-(m + t(m))/2) # not diag is added to itself before division; off diagonals also need to be divided by 2
 
     # print matrix
     # Check positive semi definite
-    if(!all(eigen(A, only.values = TRUE)$values >=  0)) warning("The estimated A matrix is not positive semi definite")
-    attr(M, "A") <- as.matrix(A)
+    psd <- all(eigen(A, only.values = TRUE)$values >=  0)
+    if(!psd) warning("The estimated A matrix is not positive semi definite")
+    attr(M, "psd") <- psd
+    attr(M, "A") <- A
+    attr(M, "coef") <- tidy(M)
+
+
+    if(psd) attr(M, "ideals") <- (M$coefficients[Xs] %*% solve(A))/2
+
+    class(M) <- "euclid"
     M
   }
 
 
+#' @export
+print.euclid <- function(x, ...) {
+  print(summary(x))
+  invisible(x)
+}
 
+
+#' @export
+summary.euclid <- function(object, ...) {
+  structure(object, class = c("summary.euclid", "data.frame"))
+
+}
+
+#' @export
+print.summary.euclid <- function(x,  ...){
+
+  A <- attr(x, "A")
+  ideals <- attr(x, "ideals")
+  psd <- attr(x, "psd")
+  coef <- attr(x, "coef")
+
+  cat("\n ------------------------------------------------------------------------------------------\n")
+  cat("\n Coefficients: \n")
+  print(coef)
+
+if(psd){
+  cat("\n ------------------------------------------------------------------------------------------\n")
+  cat("\n Matrix is positive semi definite: \n")
+  cat("\nA matrix: \n")
+  print(A)
+  cat("\nA ideals: \n")
+  print(ideals)
+}
+
+  if(!psd){
+    cat("\n ------------------------------------------------------------------------------------------\n")
+    cat("\n Matrix is not positive semi definite: \n")
+    cat("\nA matrix: \n")
+    print(A)
+    cat("\nA ideals not calculated: \n")
+
+  }
+}
 
 
 #' Get fitted values

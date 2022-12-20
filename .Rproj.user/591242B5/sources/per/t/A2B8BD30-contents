@@ -1,3 +1,0 @@
-exportPattern("^[[:alpha:]]+")
-importFrom("grDevices", "terrain.colors")
-importFrom("stats", "predict")
