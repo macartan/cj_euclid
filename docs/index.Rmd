@@ -1,5 +1,5 @@
 ---
-title: "Estimating and plotting generlized Euclidean preference parameters from conjoint data"
+title: "Estimating and plotting generalized Euclidean preference parameters from conjoint data"
 output: 
   html_document:
     toc: true

@@ -4,7 +4,15 @@
 \alias{euclid_fits}
 \title{Get fitted values}
 \usage{
-euclid_fits(formula, model, data, mins = NULL, maxs = NULL, lengths = NULL)
+euclid_fits(
+  formula,
+  model,
+  data,
+  fixed_effects = NULL,
+  mins = NULL,
+  maxs = NULL,
+  lengths = NULL
+)
 }
 \arguments{
 \item{formula}{A formula indicating lhs and rhs vars, e.g. Y ~ A + B + C}
@@ -26,6 +34,16 @@ A  \code{list}
 Get fitted values
 }
 \examples{
-model <- lm_euclid(Y ~ A + B + C, data)
-predictions_df <- euclid_fits(formula = Y ~ A + B + C, model, data, lengths = c(3,3, 3))
+model <- lm_euclid(rating ~ universal + stringency,
+   data = covid_policy_evaluations,
+   fixed_effects = "ID")$model
+
+predictions_df <-
+  euclid_fits(
+    formula = rating ~ universal + stringency,
+    model = model,
+    data = covid_policy_evaluations,
+    fixed_effects = "ID",
+    lengths = c(5, 5))
+
 }

@@ -3,44 +3,46 @@
 #'
 #' @param formula A formula indicating lhs and rhs vars, e.g. Y ~ A + B + C
 #' @param data A \code{data.frame}.
-#' @param x_vals labels for x axis
-#' @param y_vals labels for y axis
-#' @param ideal_color Color for idea points
-#' @param ... other arguments passed to estimatr
+#' @param fixed_effects optional RHS formula
+#' @param ... other arguments passed to fixest::feols
 #' @return A  \code{list}
-#' @import fabricatr
+#' @import fixest
 #' @import tidyverse
 #' @import formula.tools
 #' @export
 #' @examples
 #' library(tidyverse)
 #' library(DeclareDesign)
-#' data <-
-#' fabricatr::fabricate(
-#'   ID = add_level(50),
-#'   choice = add_level(2,
-#'                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
-#'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .1*rnorm(N)))
-#' model <- lm_euclid(Y ~ A + B, data, fixed_effects = ~ ID)
-#' model
+#' data(covid_policy_evaluations)
+#' M <- lm_euclid(rating ~ stringency + universal,
+#'   data = covid_policy_evaluations,
+#'   fixed_effects = "ID")
+#' M
 
+
+#'model <- lm_euclid(rating ~ universal + stringency  + severity,
+#'    data = covid_policy_evaluations,
+#'    fixed_effects = "ID")$model
 
 lm_euclid <-
 
-  function(formula, data, ...) {
+  function(formula, data,  fixed_effects = NULL, vcov = "hetero", ...) {
 
     Xs <- labels(terms(formula))
 
     rhs <-
       c(Xs,
         paste0("I(", Xs, "^2)"),
-        utils::combn(Xs, 2, simplify = FALSE) |> lapply(function(x) paste(x, collapse = ":")) |>
+        utils::combn(Xs, 2, simplify = FALSE) |>
+          lapply(function(x) paste(x, collapse = ":")) |>
           unlist()) |>
       paste(collapse = " + ")
 
-    f2 <- as.formula(paste(formula.tools::lhs(formula), " ~ ", rhs))
+    f2 <- paste(formula.tools::lhs(formula), " ~ ", rhs)
 
-    M <- estimatr::lm_robust(f2, data = data, ...)
+    if(!is.null(fixed_effects)) f2 <- paste(f2, "|", fixed_effects)
+
+    M <- fixest::feols(as.formula(f2), data, vcov = vcov, ...)
 
     # matrix representation
     m <- sapply(Xs, function(x)
@@ -55,17 +57,23 @@ lm_euclid <-
 
     # print matrix
     # Check positive semi definite
-    psd <- all(eigen(A, only.values = TRUE)$values >=  0)
+    eigen.values <- eigen(A, only.values = TRUE)$values
+    psd <- all(eigen.values >=  0)
     if(!psd) warning("The estimated A matrix is not positive semi definite")
-    attr(M, "psd") <- psd
-    attr(M, "A") <- A
-    attr(M, "coef") <- tidy(M)
 
+    out <-
+      list(
+      model = M,
+      coef= coefficients(M),
+      psd = psd,
+      eigen.values =  eigen.values,
+      A = A)
 
-    if(psd) attr(M, "ideals") <- (M$coefficients[Xs] %*% solve(A))/2
+    if(psd) out$ideals = (M$coefficients[Xs] %*% solve(A))/2
 
-    class(M) <- "euclid"
-    M
+    class(out) <- "euclid"
+
+    out
   }
 
 
@@ -85,31 +93,31 @@ summary.euclid <- function(object, ...) {
 #' @export
 print.summary.euclid <- function(x,  ...){
 
-  A <- attr(x, "A")
-  ideals <- attr(x, "ideals")
-  psd <- attr(x, "psd")
-  coef <- attr(x, "coef")
+  psd <- x$psd
 
   cat("\n ------------------------------------------------------------------------------------------\n")
   cat("\n Coefficients: \n")
-  print(coef)
+  print(x$coef)
 
 if(psd){
   cat("\n ------------------------------------------------------------------------------------------\n")
   cat("\n Matrix is positive semi definite: \n")
-  cat("\nA matrix: \n")
-  print(A)
-  cat("\nA ideals: \n")
-  print(ideals)
+  cat("\n The implied A matrix: \n")
+  print(x$A)
+  cat("\n Eigenvalues: \n")
+  print(x$eigen.values)
+  cat("\n Ideals: \n")
+  print(x$ideals)
 }
 
   if(!psd){
     cat("\n ------------------------------------------------------------------------------------------\n")
     cat("\n Matrix is not positive semi definite: \n")
     cat("\nA matrix: \n")
-    print(A)
-    cat("\nA ideals not calculated: \n")
-
+    print(x$A)
+    cat("\nA Eigenvalues: \n")
+    print(x$eigen.values)
+    cat("\n Ideals not calculated (edge solution) \n")
   }
 }
 
@@ -128,13 +136,24 @@ if(psd){
 #' @import formula.tools
 #' @export
 #' @examples
-#' model <- lm_euclid(Y ~ A + B + C, data)
-#' predictions_df <- euclid_fits(formula = Y ~ A + B + C, model, data, lengths = c(3,3, 3))
+#' model <- lm_euclid(rating ~ universal + stringency,
+#'    data = covid_policy_evaluations,
+#'    fixed_effects = "ID")$model
+#'
+#' predictions_df <-
+#'   euclid_fits(
+#'     formula = rating ~ universal + stringency,
+#'     model = model,
+#'     data = covid_policy_evaluations,
+#'     fixed_effects = "ID",
+#'     lengths = c(5, 5))
+#'
 
 euclid_fits <- function(
     formula,
     model,
     data,
+    fixed_effects = NULL,
     mins = NULL,
     maxs = NULL,
     lengths = NULL){
@@ -149,9 +168,15 @@ euclid_fits <- function(
   ranges <- lapply(1:length(Xs), function(j) seq(mins[j], maxs[j], length = lengths[j]))
   names(ranges) <- Xs
 
-  df <- expand_grid(do.call(expand_grid,ranges))
+  df <- do.call(tidyr::expand_grid, ranges)
 
-  df |> mutate(utility = predict(model, newdata = df))
+  if(!is.null(fixed_effects)) {
+    if(length(fixed_effects) > 1) stop("Currently set up for a single fixed effect only")
+    # df[[fixed_effects]] <- data[[fixed_effects]] |> sample(nrow(df), replace = TRUE)
+    df[[fixed_effects]] <- data[[fixed_effects]][1]
+  }
+
+  df |> dplyr::mutate(utility = predict(model, newdata = df))
 
   }
 
@@ -173,11 +198,21 @@ euclid_fits <- function(
 #' @import formula.tools
 #' @export
 #' @examples
-#' model <- lm_euclid(Y ~ A + B + C, data)
-#' predictions_df <- euclid_fits(formula = Y ~ A + B + C, model, data, lengths = c(3,3, 3))
-#' predictions_df <- euclid_fits(data, model, formula = Y ~ A + B, lengths = c(3,3))
-#'  euclid_plot(predictions_df, X = "A", Y = "B")
-#'  euclid_plot(predictions_df, X = "A", Y = "B", R = "C")
+#'
+#' model <- lm_euclid(rating ~ universal + stringency,
+#'    data = covid_policy_evaluations,
+#'    fixed_effects = ~ ID, se_type = "stata")$model
+#'
+#' predictions_df <-
+#'   euclid_fits(
+#'     formula = rating ~ universal + stringency,
+#'     model = model,
+#'     fixed_effects = "ID",
+#'     data = covid_policy_evaluations,
+#'     lengths = c(50, 50))
+#'
+#'  euclid_plot(predictions_df, "universal", "stringency")
+
 
 euclid_plot <-
   function(predictions_df,
@@ -234,7 +269,7 @@ euclid_plot <-
     g <- g +
     facet_grid(as.formula(paste(Row, " ~ ", Col))) +
     geom_point(data = predictions_df  |>
-                 group_by(!!sym(Row), !!sym(Col)) |>
+                 dplyr::group_by(!!sym(Row), !!sym(Col)) |>
                  dplyr::filter(utility == max(utility)),
                mapping = aes(!!sym(X), !!sym(Y)),
                color = ideal_color)
@@ -283,18 +318,21 @@ euclid_plot <-
 #' @export
 #' @examples
 #' library(tidyverse)
-#' library(DeclareDesign)
-#' data <-
-#' fabricatr::fabricate(
-#'   ID = add_level(20),
-#'   choice = add_level(2,
-#'                      A = rnorm(N), B = rnorm(N), C = rnorm(N),
-#'                      Y = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N)))
-#' out <- cjEuclid(Y ~ A + B + C, data, lengths = c(20, 20, 3))
+#'
+#' out <-
+#'   lm_euclid(
+#'    rating ~ universal + stringency + severity,
+#'    data = covid_policy_evaluations)
+#' out <-
+#'   cj_euclid(
+#'    rating ~ universal + stringency + severity,
+#'    data = covid_policy_evaluations,
+#'    fixed_effects = "ID",
+#'    lengths = c(20, 20, 3),
+#'    Col = "severity")
 #' out$graph
 
-
-cjEuclid <-
+cj_euclid <-
 
   function(formula,
            data,
@@ -303,6 +341,7 @@ cjEuclid <-
            Row = NULL,
            Col = NULL,
            mins = NULL, maxs = NULL, lengths = NULL,
+           fixed_effects = NULL,
            ideal_color = "blue",
            x_vals = c("L", "M","H"),
            y_vals  = c("A", "B", "C"),
@@ -312,9 +351,15 @@ cjEuclid <-
 
            ) {
 
-    model <- lm_euclid(formula, data)
+    model <- lm_euclid(formula, data, fixed_effects = fixed_effects, ...)
 
-    predictions_df <- euclid_fits(formula, model, data,  mins = mins, maxs = maxs, lengths = lengths)
+    predictions_df <- euclid_fits(formula,
+                                  model$model,
+                                  data,
+                                  fixed_effects = fixed_effects,
+                                  mins = mins,
+                                  maxs = maxs,
+                                  lengths = lengths)
 
     graph <-
       predictions_df |>

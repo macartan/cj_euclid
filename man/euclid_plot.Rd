@@ -44,9 +44,18 @@ A  \code{list}
 Plot fitted values with ideal points marked
 }
 \examples{
-model <- lm_euclid(Y ~ A + B + C, data)
-predictions_df <- euclid_fits(formula = Y ~ A + B + C, model, data, lengths = c(3,3, 3))
-predictions_df <- euclid_fits(data, model, formula = Y ~ A + B, lengths = c(3,3))
- euclid_plot(predictions_df, X = "A", Y = "B")
- euclid_plot(predictions_df, X = "A", Y = "B", R = "C")
+
+model <- lm_euclid(rating ~ universal + stringency,
+   data = covid_policy_evaluations,
+   fixed_effects = ~ ID, se_type = "stata")$model
+
+predictions_df <-
+  euclid_fits(
+    formula = rating ~ universal + stringency,
+    model = model,
+    fixed_effects = "ID",
+    data = covid_policy_evaluations,
+    lengths = c(50, 50))
+
+ euclid_plot(predictions_df, "universal", "stringency")
 }
