@@ -18,9 +18,8 @@
 #'   data = covid_policy_evaluations,
 #'   fixed_effects = "ID")
 #' M
-
-
-#'model <- lm_euclid(rating ~ universal + stringency  + severity,
+#'
+#' model <- lm_euclid(rating ~ universal + stringency  + severity,
 #'    data = covid_policy_evaluations,
 #'    fixed_effects = "ID")$model
 
@@ -320,8 +319,8 @@ euclid_plot <-
 #' library(tidyverse)
 #'
 #' out <-
-#'   lm_euclid(
-#'    rating ~ universal + stringency + severity,
+#'   cj_euclid(
+#'    rating ~ universal + stringency,
 #'    data = covid_policy_evaluations)
 #' out <-
 #'   cj_euclid(
@@ -351,10 +350,10 @@ cj_euclid <-
 
            ) {
 
-    model <- lm_euclid(formula, data, fixed_effects = fixed_effects, ...)
+    euclid <- lm_euclid(formula, data, fixed_effects = fixed_effects, ...)
 
     predictions_df <- euclid_fits(formula,
-                                  model$model,
+                                  euclid$model,
                                   data,
                                   fixed_effects = fixed_effects,
                                   mins = mins,
@@ -375,7 +374,11 @@ cj_euclid <-
         y_breaks = y_breaks)
 
 
-    list(model = model, predictions_df = predictions_df, graph = graph)
+    out <- c(euclid, predictions_df = predictions_df)
+    out$graph <- graph
+
+    class(out) <- "euclid"
+    out
 
     }
 

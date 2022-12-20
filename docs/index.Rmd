@@ -10,9 +10,9 @@ date: '2022-12-13'
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
-library(DeclareDesign)
+library(fixest)
 library(tidyverse)
-
+library(broom)
 ```
 
 
@@ -50,14 +50,15 @@ data$rating <- sapply(1:nrow(data), function(i) u(data$butter[i], data$guns[i]))
 
 
 
-model <-  lm_euclid(rating ~ guns + butter, data)
+euclid <-  lm_euclid(rating ~ guns + butter, data)
 
-model |> tidy() |> kable(digits = 2)
+euclid
+
 
 ```
-The function simply creates the Euclidian formula and passes it to `lm_robust`. 
+The function simply creates the Euclidian formula and passes it to `fixest`. 
 
-You can provide any additional `lm_robust` functions you want as additional arguments, for instance, weights, cluster, blocks.
+You can provide any additional `fixest` functions you want as additional arguments.
 
 
 ## `euclid_fits`
@@ -67,7 +68,7 @@ You can provide any additional `lm_robust` functions you want as additional argu
 ```{r}
 
 predictions_df <- 
-  euclid_fits(formula = rating ~ guns + butter, model, data, lengths = c(2,3))
+  euclid_fits(formula = rating ~ guns + butter, euclid$model, data, lengths = c(2,3))
 
 predictions_df |> kable(digits = 3)
 ```
@@ -80,23 +81,23 @@ predictions_df |> kable(digits = 3)
 ```{r}
 
 predictions_df <- 
-  euclid_fits(formula = rating ~ guns + butter, model, data, lengths = c(20,20))
+  euclid_fits(formula = rating ~ guns + butter, euclid$model, data, lengths = c(20,20))
 
 euclid_plot(predictions_df, X = "guns", Y = "butter")
 
 ```
 
-## `cjEuclid`
+## `cj_euclid`
 
 
- `cjEuclid` wraps these functions and returns a list with the model, the fitted values, and the graph.
+ `cj_euclid` wraps these functions and returns a list with the model, the fitted values, and the graph.
  
  
 
 ```{r}
 
-results <- cjEuclid(rating ~ guns + butter, data)
-results$graph
+euclid <- cj_euclid(rating ~ guns + butter, data)
+euclid$graph
 
 
 ```
@@ -109,18 +110,19 @@ The functions include multiple arguments to allow graphing multiple dimensions. 
 
 # Data has three dimensions and two observations per subject
 
+library(fabricatr)
+
 data <-
- fabricatr::fabricate(
+ fabricate(
    ID = add_level(20),
    choice = add_level(2,
                       A = rnorm(N), B = rnorm(N), C = rnorm(N),
-                      W = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N) + 3*A*B))
+                      W = -(A^2 + (B-.3)^2 + (C --.67)^2) + .2*rnorm(N) + .5*A*B))
 
 
 results <- 
-  cjEuclid(W ~ A + B + C,
-           fixed_effects = ~ ID,
-           se_type = "stata", 
+  cj_euclid(W ~ A + B + C,
+           fixed_effects = "ID",
            data = data,
            X = "B",
            Y = "C",
@@ -131,6 +133,7 @@ results <-
            y_vals = c("little", "some", "much"),
            x_vals = c("This", "that", "there"))
 
+results$model
 results$graph
 ```
 
@@ -150,7 +153,7 @@ results$graph +
 # Data has three dimensions and two observations per subject
 
 data <-
- fabricatr::fabricate(
+ fabricate(
    ID = add_level(20),
    choice = add_level(2,
                       X1 = rnorm(N), X2 = rnorm(N), X3 = rnorm(N), X4 = rnorm(N), 
@@ -158,9 +161,8 @@ data <-
 
 
 results <- 
-  cjEuclid(W ~ X1 + X2 + X3 + X4,
-           fixed_effects = ~ ID,
-           se_type = "stata", 
+  cj_euclid(W ~ X1 + X2 + X3 + X4,
+           fixed_effects = "ID",
            data = data,
            X = "X1",
            Y = "X2",
@@ -190,7 +192,11 @@ data <-
                       guns = rnorm(N),
                       rating  = -(butter^2 - (guns-.3)^2 + .2*rnorm(N)))
 
-cjEuclid(rating ~ guns + butter, data)$graph
+euclid <- cj_euclid(rating ~ guns + butter, data)
+
+euclid
+
+euclid$graph
 
 
 ```
