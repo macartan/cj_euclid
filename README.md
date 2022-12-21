@@ -5,6 +5,12 @@
 R package `cj_euclid` estimates and graphs a general linear quadratic model to represent preferences from conjoint responses. 
 
 
+**Authors:**
+
+-   [Macartan Humphreys](https://macartan.github.io) (Author)
+-   [Felix Hartmann](http://hartmannfelix.github.io) (Maintainer)
+
+
 ## Installation Instructions
 
 You can install the most recent development version using the `devtools`
