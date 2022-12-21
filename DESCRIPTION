@@ -2,15 +2,21 @@ Package: cjEuclid
 Type: Package
 Title: Estimates and graphs generalized Euclidean preferences from conjoint responses
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: Felix Hartman <yourself@somewhere.net>
-Description: Currently works with policies over two dimension.
-License: What license is it under?
+Author: Macartan Humphreys <macartan.humphreys@wzb.eu>
+Maintainer: Felix Hartmann <f.hartmann@hu-berlin.de>
+Authors@R: c(person("Macartan", "Humphreys", email = "macartan.humphreys@wzb.eu", role = c("aut", "cre")),
+             person("Hartmann", "Felix", email = "f.hartmann@hu-berlin.de", role = c("aut")))
+License: MIT + file LICENSE
+Description: Estimates and graphs linear quadratic utility models.
 Encoding: UTF-8
 LazyData: true
 Imports:
     tidyverse,
+    fixest,
     DeclareDesign
 RoxygenNote: 7.2.1
-Depends: 
-    R (>= 2.10)
+Depends:
+    tidyverse,
+    fixest,
+    formula.tools,
+    R (>= 3.0)

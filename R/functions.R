@@ -94,30 +94,29 @@ print.summary.euclid <- function(x,  ...){
 
   psd <- x$psd
 
-  cat("\n ------------------------------------------------------------------------------------------\n")
+  cat("-----------------------------------------------------------------------\n")
   cat("\n Coefficients: \n")
   print(x$coef)
 
 if(psd){
-  cat("\n ------------------------------------------------------------------------------------------\n")
-  cat("\n Matrix is positive semi definite: \n")
-  cat("\n The implied A matrix: \n")
+  cat("\n -----------------------------------------------------------------------\n")
+  cat("\n The implied A matrix is positive semi definite: \n")
   print(x$A)
   cat("\n Eigenvalues: \n")
   print(x$eigen.values)
-  cat("\n Ideals: \n")
+  cat("\n Ideal points: \n")
   print(x$ideals)
 }
 
   if(!psd){
-    cat("\n ------------------------------------------------------------------------------------------\n")
-    cat("\n Matrix is not positive semi definite: \n")
-    cat("\nA matrix: \n")
+    cat("\n ----------------------------------------------------------------------\n")
+    cat("\n The implied A matrix is not positive semi definite: \n")
     print(x$A)
     cat("\nA Eigenvalues: \n")
     print(x$eigen.values)
-    cat("\n Ideals not calculated (edge solution) \n")
+    cat("\n Ideal pointss not calculated (edge solution) \n")
   }
+  cat("-----------------------------------------------------------------------\n")
 }
 
 
@@ -159,7 +158,7 @@ euclid_fits <- function(
 
   Xs <- labels(terms(formula))
 
-  if(is.null(lengths)) lengths <- rep(25, length(Xs))
+  if(is.null(lengths)) lengths <- rep(50, length(Xs))
   if(length(lengths) != length(Xs)) stop("Check length of steps")
   if(is.null(mins)) mins <- data[Xs] |> apply(2, min, na.rm = TRUE)
   if(is.null(maxs)) maxs <- data[Xs] |> apply(2, max, na.rm = TRUE)
@@ -171,7 +170,6 @@ euclid_fits <- function(
 
   if(!is.null(fixed_effects)) {
     if(length(fixed_effects) > 1) stop("Currently set up for a single fixed effect only")
-    # df[[fixed_effects]] <- data[[fixed_effects]] |> sample(nrow(df), replace = TRUE)
     df[[fixed_effects]] <- data[[fixed_effects]][1]
   }
 
@@ -198,14 +196,15 @@ euclid_fits <- function(
 #' @export
 #' @examples
 #'
-#' model <- lm_euclid(rating ~ universal + stringency,
+#' model <-
+#'  lm_euclid(rating ~ universal + stringency,
 #'    data = covid_policy_evaluations,
-#'    fixed_effects = ~ ID, se_type = "stata")$model
+#'    fixed_effects = "ID")
 #'
 #' predictions_df <-
 #'   euclid_fits(
 #'     formula = rating ~ universal + stringency,
-#'     model = model,
+#'     model = model$model,
 #'     fixed_effects = "ID",
 #'     data = covid_policy_evaluations,
 #'     lengths = c(50, 50))
@@ -374,11 +373,10 @@ cj_euclid <-
         y_breaks = y_breaks)
 
 
-    out <- c(euclid, predictions_df = predictions_df)
-    out$graph <- graph
+    euclid$graph <- graph
+    euclid$predictions_df <- predictions_df
 
-    class(out) <- "euclid"
-    out
+    euclid
 
     }
 
