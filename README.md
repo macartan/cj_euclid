@@ -16,7 +16,7 @@ if(!require(devtools)) install.packages("devtools")
 ```
 
 Then, load `devtools` and use the function `install_github()` to install
-`exr`:
+`cj_euclid`:
 
 ```
 remotes::install_github("macartan/cj_euclid")
