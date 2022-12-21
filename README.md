@@ -47,7 +47,7 @@ The elements of a, b and A are estimated using `fixest` and plotted with `ggplot
     data = covid_policy_evaluations)
 ```
 
-The output is a list containing (1) a model (2) summary information (3) a fitted data frame and (4) a plot. The summary reports the implied weighting. For details, see [a relative link](/docs/index.html).
+The output is a list containing (1) a model (2) summary information (3) a fitted data frame and (4) a plot. The summary reports the implied weighting. For details, see [here](/docs/index.Rmd).
 
 
 
