@@ -133,7 +133,7 @@ results <-
            y_vals = c("little", "some", "much"),
            x_vals = c("This", "that", "there"))
 
-results$model
+results
 results$graph
 ```
 
