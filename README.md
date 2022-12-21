@@ -7,7 +7,16 @@ R package `cj_euclid` estimates and graphs a general linear quadratic model to r
 
 ## Installation Instructions
 
-To install:
+You can install the most recent development version using the `devtools`
+package. First you have to install `devtools` using the following code.
+Note that you only have to do this once:
+
+``` r
+if(!require(devtools)) install.packages("devtools")
+```
+
+Then, load `devtools` and use the function `install_github()` to install
+`exr`:
 
 ```
 remotes::install_github("macartan/cj_euclid")
