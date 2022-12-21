@@ -11,6 +11,11 @@ R package `cj_euclid` estimates and graphs a general linear quadratic model to r
 -   [Felix Hartmann](http://hartmannfelix.github.io) (Maintainer)
 
 
+**Reference:**
+
+-   F. Hartmann, M. Humphreys, F. Geissler, H. Klüver, and J. Giesecke. (2022+). [Trading Liberties: Estimating Covid policy preferences from conjoint data.](https://osf.io/m6yvb/) (Working Paper).
+
+
 ## Installation Instructions
 
 You can install the most recent development version using the `devtools`
