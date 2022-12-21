@@ -1,9 +1,12 @@
 # cj_euclid
-euclidean graphing
 
+Estimates and graphs a general linear quadratic model to represent preferences from conjoint responses
 
-Estimates a general linear quadratic model to represent multidimensional preferences and plots ideals and indifference curves.
+To install:
 
+```
+remotes::install_github("macartan/cj_euclid")
+```
 Input is a formula listing outcomes on lhs and policy variables on rhs as well as a data frame and other arguments.
 
 The assumed model is of the form u(z) = a + b'z - z'Az  where b and z are n-vectors and A is an n*n symmetric matrix. If R is positive semi-definite then implied preferences 
